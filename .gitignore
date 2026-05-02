@@ -1,0 +1,12 @@
+.triton_mcp_index/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.venv/
+.env
+.pytest_cache/
+.DS_Store
+*.so
