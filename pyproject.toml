@@ -25,7 +25,7 @@ triton-index = "triton_mcp.scripts.index_docs:main"
 [tool.hatch.build.targets.wheel]
 packages = ["src/triton_mcp"]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
