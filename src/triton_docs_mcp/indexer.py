@@ -30,6 +30,8 @@ def _count_tokens(text: str) -> int:
 def _chunk_text(
     text: str, chunk_size: int = CHUNK_SIZE_TOKENS, overlap: int = CHUNK_OVERLAP_TOKENS
 ) -> list[str]:
+    if overlap >= chunk_size:
+        overlap = chunk_size // 4
     tokens = _enc.encode(text)
     chunks: list[str] = []
     start = 0
@@ -78,7 +80,7 @@ def _build_chunks(pages: list[Page]) -> list[Chunk]:
                     chunk_content + "\n\n### Code Examples\n\n" + code_joined[:2000]
                 )
 
-            url_hash = hashlib.md5(page.url.encode()).hexdigest()[:8]
+            url_hash = hashlib.sha256(page.url.encode()).hexdigest()[:8]
             chunk_id = f"{url_hash}_{i}"
 
             section_name = ""
@@ -137,7 +139,7 @@ class Indexer:
 
     def _init_sqlite(self) -> sqlite3.Connection:
         SQLITE_PATH.parent.mkdir(parents=True, exist_ok=True)
-        self.sqlite_conn = sqlite3.connect(str(SQLITE_PATH))
+        self.sqlite_conn = sqlite3.connect(str(SQLITE_PATH), check_same_thread=False)
         self.sqlite_conn.execute("PRAGMA journal_mode=WAL")
         self.sqlite_conn.execute("""
             CREATE TABLE IF NOT EXISTS chunks (

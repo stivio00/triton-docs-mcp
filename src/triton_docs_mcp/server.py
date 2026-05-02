@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import re
+import threading
 from contextlib import asynccontextmanager
 
 from mcp.server.fastmcp import FastMCP
@@ -15,17 +16,53 @@ from .prompts import (
     TRITON_SYSTEM_PROMPT,
     TRITON_TROUBLESHOOTER_PROMPT,
 )
-from .search import SearchEngine
+from .search import SearchResult, SearchEngine
 
 logger = logging.getLogger(__name__)
 
+_BINARY_EXTENSIONS = {
+    ".jpeg",
+    ".jpg",
+    ".png",
+    ".gif",
+    ".svg",
+    ".bmp",
+    ".webp",
+    ".ico",
+    ".pdf",
+    ".zip",
+    ".mp4",
+    ".mp3",
+    ".wav",
+    ".gz",
+    ".whl",
+}
+
+
+def _is_binary_url(url: str) -> bool:
+    lower = url.lower()
+    for ext in _BINARY_EXTENSIONS:
+        if lower.endswith(ext):
+            return True
+    return False
+
+
+def _has_binary_content(text: str, threshold: float = 0.05) -> bool:
+    if not text:
+        return True
+    non_printable = sum(1 for c in text if not c.isprintable() and c not in "\n\r\t")
+    return (non_printable / max(len(text), 1)) > threshold
+
+
 _engine: SearchEngine | None = None
+_engine_lock = threading.Lock()
 
 
 def _get_engine() -> SearchEngine:
     global _engine
-    if _engine is None or _engine.sqlite_conn is None:
-        _engine = SearchEngine()
+    with _engine_lock:
+        if _engine is None or _engine.sqlite_conn is None:
+            _engine = SearchEngine()
     return _engine
 
 
@@ -33,7 +70,10 @@ def _format_results(results: list, max_content_length: int = 3000) -> str:
     if not results:
         return "No results found."
     output: list[str] = []
-    for i, r in enumerate(results, 1):
+    for r in results:
+        if _is_binary_url(r.page_url) or _has_binary_content(r.content):
+            continue
+        i = len(output) // 4 + 1
         output.append(f"### Result {i}: {r.page_title}")
         if r.section:
             output.append(f"**Section:** {r.section}")
@@ -44,6 +84,8 @@ def _format_results(results: list, max_content_length: int = 3000) -> str:
             content += "..."
         output.append(content)
         output.append("---")
+    if not output:
+        return "No results found."
     return "\n\n".join(output)
 
 
@@ -60,8 +102,10 @@ async def app_lifespan(server: FastMCP):
         )
     yield
     global _engine
-    _engine.close()
-    _engine = None
+    with _engine_lock:
+        if _engine is not None:
+            _engine.close()
+        _engine = None
     logger.info("Triton MCP server shutting down...")
 
 
@@ -85,6 +129,8 @@ def search_docs(query: str, mode: str = "hybrid", k: int = 5) -> str:
         Relevant documentation sections with URLs.
     """
     k = min(max(k, 1), 20)
+    if mode not in ("semantic", "keyword", "hybrid"):
+        return f'Invalid mode: "{mode}". Must be one of: semantic, keyword, hybrid.'
     engine = _get_engine()
 
     if mode == "semantic":
@@ -107,6 +153,8 @@ def get_page(url: str) -> str:
     Returns:
         Full content of the page, all chunks concatenated.
     """
+    if _is_binary_url(url):
+        return f"Cannot retrieve binary content: {url}"
     engine = _get_engine()
     chunks = engine.get_page(url)
     if not chunks:
@@ -162,7 +210,6 @@ def get_model_config_template(
         available = ", ".join(f"`{k}`" for k in BACKEND_INFO)
         return f"Unknown backend: {backend}. Available: {available}"
 
-    BACKEND_INFO[backend]
     device = "KIND_GPU" if gpu else "KIND_CPU"
 
     platform_map = {
@@ -340,6 +387,7 @@ def list_doc_pages() -> str:
     pages = engine.list_pages()
     if not pages:
         return "No pages indexed. Run `triton-docs-index` to build the index first."
+    pages = [p for p in pages if not _is_binary_url(p["url"])]
     lines = [f"# Indexed Triton Documentation ({len(pages)} pages)\n"]
     for p in pages:
         lines.append(f"- [{p['title']}]({p['url']})")
@@ -502,19 +550,25 @@ def python_client_help(task: str) -> str:
         f"python client {task} example",
     ]
 
-    all_results: list = []
+    all_results: list[SearchResult] = []
     seen_ids: set[str] = set()
     for q in queries:
         results = engine.hybrid_search(q, k=5)
         for r in results:
-            if r.chunk_id not in seen_ids:
+            if (
+                r.chunk_id not in seen_ids
+                and not _is_binary_url(r.page_url)
+                and not _has_binary_content(r.content)
+            ):
                 seen_ids.add(r.chunk_id)
                 all_results.append(r)
 
     output = [f"# Python Client Help: {task}\n"]
 
-    gh_results = [r for r in all_results if "github.com" in r.page_url]
-    doc_results = [r for r in all_results if "github.com" not in r.page_url]
+    gh_results = [r for r in all_results if "raw.githubusercontent.com" in r.page_url]
+    doc_results = [
+        r for r in all_results if "raw.githubusercontent.com" not in r.page_url
+    ]
 
     if gh_results:
         output.append("## Client Source & Examples")
@@ -815,7 +869,7 @@ I need to optimize the performance of my Triton model:
 def main():
     logging.basicConfig(level=logging.INFO)
     port = int(os.environ.get("TRITON_DOCS_MCP_PORT", "8080"))
-    host = os.environ.get("TRITON_DOCS_MCP_HOST", "0.0.0.0")
+    host = os.environ.get("TRITON_DOCS_MCP_HOST", "127.0.0.1")
     mcp.settings.host = host
     mcp.settings.port = port
     mcp.run(transport="streamable-http")

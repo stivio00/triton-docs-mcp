@@ -36,7 +36,9 @@ class SearchEngine:
             )
             self.collection = self.chroma_client.get_collection(COLLECTION_NAME)
         if self.sqlite_conn is None:
-            self.sqlite_conn = sqlite3.connect(str(SQLITE_PATH))
+            self.sqlite_conn = sqlite3.connect(
+                str(SQLITE_PATH), check_same_thread=False
+            )
             self.sqlite_conn.execute("PRAGMA journal_mode=WAL")
 
     def semantic_search(self, query: str, k: int = 5) -> list[SearchResult]:

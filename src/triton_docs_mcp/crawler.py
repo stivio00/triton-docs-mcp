@@ -32,10 +32,20 @@ _EXT_TO_SKIP = {
     ".whl",
     ".png",
     ".jpg",
+    ".jpeg",
     ".svg",
     ".gif",
+    ".webp",
+    ".bmp",
+    ".ico",
     ".mp4",
+    ".mp3",
+    ".wav",
 }
+
+_RE_CONTENT_DIV = re.compile(r"document|content|body")
+_RE_SIDEBAR_CLASS = re.compile(r"sidebar|toc|breadcrumb|feedback|related", re.I)
+_RE_HEADING = re.compile(r"^h[1-6]$")
 
 
 @dataclass
@@ -79,9 +89,7 @@ def _extract_page(soup: BeautifulSoup, url: str) -> Page | None:
         or soup.find("div", role="main")
     )
     if not main:
-        main = (
-            soup.find("div", class_=re.compile(r"document|content|body")) or soup.body
-        )
+        main = soup.find("div", class_=_RE_CONTENT_DIV) or soup.body
 
     if not main:
         return None
@@ -91,9 +99,7 @@ def _extract_page(soup: BeautifulSoup, url: str) -> Page | None:
     ):
         tag.decompose()
 
-    for tag in main.find_all(
-        class_=re.compile(r"sidebar|toc|breadcrumb|feedback|related", re.I)
-    ):
+    for tag in main.find_all(class_=_RE_SIDEBAR_CLASS):
         tag.decompose()
 
     title_el = soup.find("h1")
@@ -111,7 +117,7 @@ def _extract_page(soup: BeautifulSoup, url: str) -> Page | None:
             title = urlparse(url).path.split("/")[-2].replace("_", " ").title()
 
     sections: list[dict] = []
-    for heading in main.find_all(re.compile(r"^h[1-6]$")):
+    for heading in main.find_all(_RE_HEADING):
         level = int(heading.name[1])
         text = heading.get_text(strip=True)
         if not text:
@@ -189,11 +195,14 @@ async def crawl(max_pages: int = 0) -> list[Page]:
     ) as client:
 
         async def _fetch(url: str) -> tuple[BeautifulSoup | None, str]:
+            await asyncio.sleep(CRAWL_DELAY_SECONDS)
             async with semaphore:
-                await asyncio.sleep(CRAWL_DELAY_SECONDS)
                 try:
                     resp = await client.get(url)
                     resp.raise_for_status()
+                    content_type = resp.headers.get("content-type", "")
+                    if not content_type.startswith(("text/", "application/xml")):
+                        return None, url
                     return BeautifulSoup(resp.text, "lxml"), url
                 except httpx.HTTPError as e:
                     logger.warning(f"Failed to fetch {url}: {e}")
@@ -272,8 +281,8 @@ async def crawl_github_sources() -> list[Page]:
 
             async def _fetch_github(path: str) -> Page | None:
                 url = f"{GITHUB_RAW_URL}/{repo}/{branch}/{path}"
+                await asyncio.sleep(CRAWL_DELAY_SECONDS)
                 async with semaphore:
-                    await asyncio.sleep(CRAWL_DELAY_SECONDS)
                     try:
                         resp = await client.get(url)
                         resp.raise_for_status()
@@ -306,6 +315,7 @@ async def crawl_github_sources() -> list[Page]:
                             code_buf.append(line)
                     sections: list[dict] = []
                     current_heading = ""
+                    current_level = 1
                     current_content: list[str] = []
                     for line in text.split("\n"):
                         h_match = re.match(r"^(#{1,6})\s+(.+)$", line)
@@ -314,11 +324,12 @@ async def crawl_github_sources() -> list[Page]:
                                 sections.append(
                                     {
                                         "heading": current_heading,
-                                        "level": len(h_match.group(1)),
+                                        "level": current_level,
                                         "content": " ".join(current_content),
                                     }
                                 )
                             current_heading = h_match.group(2).strip()
+                            current_level = len(h_match.group(1))
                             current_content = []
                         else:
                             current_content.append(line.strip())
@@ -326,7 +337,7 @@ async def crawl_github_sources() -> list[Page]:
                         sections.append(
                             {
                                 "heading": current_heading,
-                                "level": 1,
+                                "level": current_level,
                                 "content": " ".join(current_content),
                             }
                         )
