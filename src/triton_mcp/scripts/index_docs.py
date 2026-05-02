@@ -38,7 +38,9 @@ def main() -> None:
         all_pages.extend(docs_pages)
 
     if not skip_github:
-        print("Crawling GitHub sources (server, client, perf_analyzer, model_analyzer)...")
+        print(
+            "Crawling GitHub sources (server, client, perf_analyzer, model_analyzer)..."
+        )
         gh_pages = asyncio.run(crawl_github_sources())
         print(f"Crawled {len(gh_pages)} GitHub source files")
         all_pages.extend(gh_pages)

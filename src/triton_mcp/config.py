@@ -1,6 +1,8 @@
 from pathlib import Path
 
-BASE_URL = "https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/"
+BASE_URL = (
+    "https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/"
+)
 INDEX_DIR = Path.home() / ".triton_mcp_index"
 CHROMA_DIR = INDEX_DIR / "chroma_db"
 SQLITE_PATH = INDEX_DIR / "triton_docs.db"
@@ -44,7 +46,10 @@ GITHUB_SOURCES = {
             "src/python/library/tritonclient/grpc/__init__.py",
             "src/python/library/tritonclient/utils/__init__.py",
         ],
-        "extra_glob_patterns": ["src/python/examples/*_client.py", "src/python/examples/*_perf_client.py"],
+        "extra_glob_patterns": [
+            "src/python/examples/*_client.py",
+            "src/python/examples/*_perf_client.py",
+        ],
     },
     "perf_analyzer": {
         "repo": "triton-inference-server/perf_analyzer",
@@ -98,15 +103,21 @@ BACKEND_INFO = {
         "name": "TensorRT-LLM",
         "description": "High-performance LLM inference backend using NVIDIA TensorRT. Supports tensor parallelism, in-flight batching, and KV cache management.",
         "config_fields": [
-            "model_instance_kind", "model_instance_device", "max_batch_size",
-            "gpu_device", "tensor_parallel_size", "max_queue_delay_microseconds",
+            "model_instance_kind",
+            "model_instance_device",
+            "max_batch_size",
+            "gpu_device",
+            "tensor_parallel_size",
+            "max_queue_delay_microseconds",
         ],
     },
     "vllm": {
         "name": "vLLM",
         "description": "Backend for serving LLMs using vLLM engine. Supports PagedAttention, continuous batching, and multi-LoRA.",
         "config_fields": [
-            "model_instance_kind", "model_instance_device", "max_batch_size",
+            "model_instance_kind",
+            "model_instance_device",
+            "max_batch_size",
             "gpu_device",
         ],
     },
@@ -114,28 +125,35 @@ BACKEND_INFO = {
         "name": "Python Backend",
         "description": "Write custom model logic in Python. Supports async execution, shared memory, and BLS (Business Logic Scripting).",
         "config_fields": [
-            "model_instance_kind", "model_instance_device",
+            "model_instance_kind",
+            "model_instance_device",
         ],
     },
     "pytorch": {
         "name": "PyTorch",
         "description": "Serve PyTorch models (TorchScript or Eager mode). Supports GPU and CPU inference with dynamic batching.",
         "config_fields": [
-            "model_instance_kind", "model_instance_device", "max_batch_size",
+            "model_instance_kind",
+            "model_instance_device",
+            "max_batch_size",
         ],
     },
     "onnxruntime": {
         "name": "ONNX Runtime",
         "description": "Serve ONNX models using ONNX Runtime. Supports GPU and CPU with multiple execution providers.",
         "config_fields": [
-            "model_instance_kind", "model_instance_device", "max_batch_size",
+            "model_instance_kind",
+            "model_instance_device",
+            "max_batch_size",
         ],
     },
     "tensorrt": {
         "name": "TensorRT",
         "description": "High-performance inference for NVIDIA GPUs using TensorRT. Optimizes models for maximum throughput and minimum latency.",
         "config_fields": [
-            "model_instance_kind", "model_instance_device", "max_batch_size",
+            "model_instance_kind",
+            "model_instance_device",
+            "max_batch_size",
             "acceleration",
         ],
     },
@@ -143,14 +161,17 @@ BACKEND_INFO = {
         "name": "FIL (Forest Inference Library)",
         "description": "Accelerated inference for decision tree models (XGBoost, LightGBM, Scikit-learn forests).",
         "config_fields": [
-            "model_instance_kind", "model_instance_device", "max_batch_size",
+            "model_instance_kind",
+            "model_instance_device",
+            "max_batch_size",
         ],
     },
     "dali": {
         "name": "DALI (Data Loading Library)",
         "description": "Pre/posprocessing backend using NVIDIA DALI for image, video, and audio pipelines.",
         "config_fields": [
-            "model_instance_kind", "model_instance_device",
+            "model_instance_kind",
+            "model_instance_device",
         ],
     },
     "custom": {

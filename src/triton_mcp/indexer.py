@@ -27,7 +27,9 @@ def _count_tokens(text: str) -> int:
     return len(_enc.encode(text))
 
 
-def _chunk_text(text: str, chunk_size: int = CHUNK_SIZE_TOKENS, overlap: int = CHUNK_OVERLAP_TOKENS) -> list[str]:
+def _chunk_text(
+    text: str, chunk_size: int = CHUNK_SIZE_TOKENS, overlap: int = CHUNK_OVERLAP_TOKENS
+) -> list[str]:
     tokens = _enc.encode(text)
     chunks: list[str] = []
     start = 0
@@ -59,9 +61,11 @@ def _build_chunks(pages: list[Page]) -> list[Chunk]:
         if not page_text.strip():
             continue
 
-        sections_text = "\n\n".join(
-            f"## {s['heading']}\n{s['content']}" for s in page.sections
-        ) if page.sections else ""
+        sections_text = (
+            "\n\n".join(f"## {s['heading']}\n{s['content']}" for s in page.sections)
+            if page.sections
+            else ""
+        )
 
         combined = f"# {page.title}\n\n{sections_text}" if sections_text else page_text
         if len(combined.strip()) < len(page_text.strip()):
@@ -72,7 +76,9 @@ def _build_chunks(pages: list[Page]) -> list[Chunk]:
 
         for i, chunk_content in enumerate(text_chunks):
             if i == 0 and code_joined:
-                chunk_content = chunk_content + "\n\n### Code Examples\n\n" + code_joined[:2000]
+                chunk_content = (
+                    chunk_content + "\n\n### Code Examples\n\n" + code_joined[:2000]
+                )
 
             url_hash = hashlib.md5(page.url.encode()).hexdigest()[:8]
             chunk_id = f"{url_hash}_{i}"
@@ -81,15 +87,17 @@ def _build_chunks(pages: list[Page]) -> list[Chunk]:
             if page.sections:
                 section_name = page.sections[0]["heading"]
 
-            all_chunks.append(Chunk(
-                chunk_id=chunk_id,
-                page_url=page.url,
-                page_title=page.title,
-                section=section_name,
-                chunk_index=i,
-                content=chunk_content,
-                code_blocks=code_joined,
-            ))
+            all_chunks.append(
+                Chunk(
+                    chunk_id=chunk_id,
+                    page_url=page.url,
+                    page_title=page.title,
+                    section=section_name,
+                    chunk_index=i,
+                    content=chunk_content,
+                    code_blocks=code_joined,
+                )
+            )
 
     logger.info(f"Built {len(all_chunks)} chunks from {len(pages)} pages")
     return all_chunks
@@ -176,7 +184,15 @@ class Indexer:
             for c in batch:
                 self.sqlite_conn.execute(
                     "INSERT OR REPLACE INTO chunks (chunk_id, page_url, page_title, section, chunk_index, content, code_blocks) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (c.chunk_id, c.page_url, c.page_title, c.section, c.chunk_index, c.content, c.code_blocks),
+                    (
+                        c.chunk_id,
+                        c.page_url,
+                        c.page_title,
+                        c.section,
+                        c.chunk_index,
+                        c.content,
+                        c.code_blocks,
+                    ),
                 )
 
             if start % 200 == 0:

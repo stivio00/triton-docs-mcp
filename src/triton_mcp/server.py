@@ -4,13 +4,16 @@ import json
 import logging
 import os
 from contextlib import asynccontextmanager
-from typing import Any
 
-from mcp.server.fastmcp import Context, FastMCP
+from mcp.server.fastmcp import FastMCP
 
 from .config import BACKEND_INFO, TOPICS
 from .prompts import DEPLOYMENT_GUIDE_TOPICS as DEPLOY_TOPICS
-from .prompts import TRITON_OPTIMIZER_PROMPT, TRITON_SYSTEM_PROMPT, TRITON_TROUBLESHOOTER_PROMPT
+from .prompts import (
+    TRITON_OPTIMIZER_PROMPT,
+    TRITON_SYSTEM_PROMPT,
+    TRITON_TROUBLESHOOTER_PROMPT,
+)
 from .search import SearchEngine
 
 logger = logging.getLogger(__name__)
@@ -51,7 +54,9 @@ async def app_lifespan(server: FastMCP):
         pages = engine.list_pages()
         logger.info(f"Index ready with {len(pages)} pages")
     except Exception:
-        logger.warning("Index not found. Run `triton-index` first to build the docs index.")
+        logger.warning(
+            "Index not found. Run `triton-index` first to build the docs index."
+        )
     yield
     global _engine
     _engine.close()
@@ -123,13 +128,22 @@ def list_backends() -> str:
         lines.append(f"## {info['name']} (`{key}`)")
         lines.append(f"{info['description']}\n")
         if info["config_fields"]:
-            lines.append("Key config fields: " + ", ".join(f"`{f}`" for f in info["config_fields"]))
+            lines.append(
+                "Key config fields: "
+                + ", ".join(f"`{f}`" for f in info["config_fields"])
+            )
         lines.append("")
     return "\n".join(lines)
 
 
 @mcp.tool()
-def get_model_config_template(backend: str, model_name: str = "my_model", max_batch_size: int = 0, instance_count: int = 1, gpu: bool = True) -> str:
+def get_model_config_template(
+    backend: str,
+    model_name: str = "my_model",
+    max_batch_size: int = 0,
+    instance_count: int = 1,
+    gpu: bool = True,
+) -> str:
     """Generate a config.pbtxt template for a Triton model deployment.
 
     Args:
@@ -167,87 +181,99 @@ def get_model_config_template(backend: str, model_name: str = "my_model", max_ba
 
     lines = [
         f'name: "{model_name}"',
-        f"platform: \"{platform}\"",
+        f'platform: "{platform}"',
         f"max_batch_size: {max_batch_size}",
         "",
     ]
 
     if backend == "tensorrt_llm":
-        lines.extend([
-            "# TensorRT-LLM specific configuration",
-            "# See: https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/tensorrtllm_backend/README.html",
-            "",
-            "model_parameters: {",
-            "  key: \"tensor_parallel_size\"",
-            "  value: { string_value: \"1\" }",
-            "}",
-            "model_parameters: {",
-            "  key: \"max_batch_size\"",
-            f"  value: {{ string_value: \"{max_batch_size}\" }}",
-            "}",
-        ])
+        lines.extend(
+            [
+                "# TensorRT-LLM specific configuration",
+                "# See: https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/tensorrtllm_backend/README.html",
+                "",
+                "model_parameters: {",
+                '  key: "tensor_parallel_size"',
+                '  value: { string_value: "1" }',
+                "}",
+                "model_parameters: {",
+                '  key: "max_batch_size"',
+                f'  value: {{ string_value: "{max_batch_size}" }}',
+                "}",
+            ]
+        )
     elif backend == "vllm":
-        lines.extend([
-            "# vLLM backend configuration",
-            "# See: https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/vllm_backend/README.html",
-            "",
-            "model_parameters: {",
-            "  key: \"model\"",
-            "  value: { string_value: \"<HUGGING_FACE_MODEL_ID_OR_PATH>\" }",
-            "}",
-        ])
+        lines.extend(
+            [
+                "# vLLM backend configuration",
+                "# See: https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/vllm_backend/README.html",
+                "",
+                "model_parameters: {",
+                '  key: "model"',
+                '  value: { string_value: "<HUGGING_FACE_MODEL_ID_OR_PATH>" }',
+                "}",
+            ]
+        )
     elif backend == "python":
-        lines.extend([
-            "# Python backend configuration",
-            "# See: https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/python_backend/README.html",
-            "",
-            "# Place your model.py in the model directory:",
-            "# models/<model_name>/1/model.py",
-            "",
-            "parameters: {",
-            "  key: \"EXECUTION_ENV_PATH\"",
-            "  value: { string_value: \"/opt/tritonserver/python_backend_stubs/python_311_stub\" }",
-            "}",
-        ])
+        lines.extend(
+            [
+                "# Python backend configuration",
+                "# See: https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/python_backend/README.html",
+                "",
+                "# Place your model.py in the model directory:",
+                "# models/<model_name>/1/model.py",
+                "",
+                "parameters: {",
+                '  key: "EXECUTION_ENV_PATH"',
+                '  value: { string_value: "/opt/tritonserver/python_backend_stubs/python_311_stub" }',
+                "}",
+            ]
+        )
     else:
-        lines.extend([
-            "# Input and output tensors",
-            "# Customize these based on your model's actual inputs/outputs:",
-            "input [",
-            "  {",
-            "    name: \"input\"",
-            "    data_type: TYPE_FP32",
-            "    dims: [-1]",
-            "  }",
-            "]",
-            "output [",
-            "  {",
-            "    name: \"output\"",
-            "    data_type: TYPE_FP32",
-            "    dims: [-1]",
-            "  }",
-            "]",
-        ])
+        lines.extend(
+            [
+                "# Input and output tensors",
+                "# Customize these based on your model's actual inputs/outputs:",
+                "input [",
+                "  {",
+                '    name: "input"',
+                "    data_type: TYPE_FP32",
+                "    dims: [-1]",
+                "  }",
+                "]",
+                "output [",
+                "  {",
+                '    name: "output"',
+                "    data_type: TYPE_FP32",
+                "    dims: [-1]",
+                "  }",
+                "]",
+            ]
+        )
 
-    lines.extend([
-        "",
-        "instance_group [",
-        "  {",
-        f"    count: {instance_count}",
-        f"    kind: {device}",
-        "  }",
-        "]",
-    ])
+    lines.extend(
+        [
+            "",
+            "instance_group [",
+            "  {",
+            f"    count: {instance_count}",
+            f"    kind: {device}",
+            "  }",
+            "]",
+        ]
+    )
 
     if max_batch_size > 0:
-        lines.extend([
-            "",
-            "# Dynamic batching configuration",
-            "dynamic_batching {",
-            "  preferred_batch_size: [4, 8]",
-            "  max_queue_delay_microseconds: 100000",
-            "}",
-        ])
+        lines.extend(
+            [
+                "",
+                "# Dynamic batching configuration",
+                "dynamic_batching {",
+                "  preferred_batch_size: [4, 8]",
+                "  max_queue_delay_microseconds: 100000",
+                "}",
+            ]
+        )
 
     lines.append("")
     return "\n".join(lines)
@@ -359,9 +385,14 @@ def analyze_config(config_pbtxt: str) -> str:
     if platform_m:
         plat = platform_m.group(1).lower()
         backend_map = {
-            "tensorrt_plan": "tensorrt", "tensorrt_llm": "tensorrt_llm",
-            "pytorch_libtorch": "pytorch", "onnxruntime_onnx": "onnxruntime",
-            "python": "python", "vllm": "vllm", "fil": "fil", "dali": "dali",
+            "tensorrt_plan": "tensorrt",
+            "tensorrt_llm": "tensorrt_llm",
+            "pytorch_libtorch": "pytorch",
+            "onnxruntime_onnx": "onnxruntime",
+            "python": "python",
+            "vllm": "vllm",
+            "fil": "fil",
+            "dali": "dali",
         }
         for k, v in backend_map.items():
             if k in plat:
@@ -378,33 +409,51 @@ def analyze_config(config_pbtxt: str) -> str:
         issues.append("Missing 'name' field — every model config must have a name")
 
     if not platform_m and "model_parameters" not in config_pbtxt:
-        issues.append("Missing 'platform' field — specify the backend type (e.g., onnxruntime_onnx, pytorch_libtorch)")
+        issues.append(
+            "Missing 'platform' field — specify the backend type (e.g., onnxruntime_onnx, pytorch_libtorch)"
+        )
 
     max_batch_val = int(max_batch_m.group(1)) if max_batch_m else None
     if max_batch_val is not None:
         if max_batch_val == 0 and backend_hint not in ("tensorrt_llm", "vllm"):
             if not has_dynamic_batching:
-                suggestions.append("max_batch_size=0 with dynamic_batching is recommended for throughput — consider adding a dynamic_batching block")
+                suggestions.append(
+                    "max_batch_size=0 with dynamic_batching is recommended for throughput — consider adding a dynamic_batching block"
+                )
         elif max_batch_val > 0:
             if not has_dynamic_batching:
-                suggestions.append(f"max_batch_size={max_batch_val} but no dynamic_batching configured — adding dynamic_batching can improve throughput by grouping requests")
+                suggestions.append(
+                    f"max_batch_size={max_batch_val} but no dynamic_batching configured — adding dynamic_batching can improve throughput by grouping requests"
+                )
             if max_batch_val > 64 and backend_hint in ("pytorch", "python"):
-                suggestions.append(f"max_batch_size={max_batch_val} is very high for {backend_hint} — consider reducing to 8-32 and using multiple instances")
+                suggestions.append(
+                    f"max_batch_size={max_batch_val} is very high for {backend_hint} — consider reducing to 8-32 and using multiple instances"
+                )
 
     if not has_instance_group:
-        suggestions.append("No instance_group configured — add instance_group with count and kind (KIND_GPU/KIND_CPU) for explicit GPU/CPU placement")
+        suggestions.append(
+            "No instance_group configured — add instance_group with count and kind (KIND_GPU/KIND_CPU) for explicit GPU/CPU placement"
+        )
     else:
         if "KIND_GPU" not in config_pbtxt and "KIND_CPU" not in config_pbtxt:
-            suggestions.append("instance_group present but kind not specified — add kind: KIND_GPU or KIND_CPU")
+            suggestions.append(
+                "instance_group present but kind not specified — add kind: KIND_GPU or KIND_CPU"
+            )
 
     if has_dynamic_batching:
         if "preferred_batch_size" not in config_pbtxt:
-            suggestions.append("dynamic_batching present but preferred_batch_size not set — adding preferred_batch_size helps optimize batching")
+            suggestions.append(
+                "dynamic_batching present but preferred_batch_size not set — adding preferred_batch_size helps optimize batching"
+            )
         if "max_queue_delay_microseconds" not in config_pbtxt:
-            suggestions.append("Consider setting max_queue_delay_microseconds in dynamic_batching to control the tradeoff between throughput and latency")
+            suggestions.append(
+                "Consider setting max_queue_delay_microseconds in dynamic_batching to control the tradeoff between throughput and latency"
+            )
 
     if not has_response_cache and backend_hint not in ("tensorrt_llm", "vllm"):
-        suggestions.append("Consider enabling response_cache for models with repeated inputs to reduce inference latency")
+        suggestions.append(
+            "Consider enabling response_cache for models with repeated inputs to reduce inference latency"
+        )
 
     output = ["# Config Analysis\n"]
     if info:
@@ -485,13 +534,17 @@ def python_client_help(task: str) -> str:
             output.append(f"- [{r.page_title}]({r.page_url})")
 
     if not all_results:
-        output.append("No results found. Try a different query, e.g., 'inference', 'shared memory', 'async'.")
+        output.append(
+            "No results found. Try a different query, e.g., 'inference', 'shared memory', 'async'."
+        )
 
     return "\n\n".join(output)
 
 
 @mcp.tool()
-def perf_test_guide(model_name: str, backend: str = "", protocol: str = "grpc", concurrency: int = 1) -> str:
+def perf_test_guide(
+    model_name: str, backend: str = "", protocol: str = "grpc", concurrency: int = 1
+) -> str:
     """Generate a performance testing guide using perf_analyzer and model_analyzer.
 
     Args:
@@ -515,16 +568,16 @@ def perf_test_guide(model_name: str, backend: str = "", protocol: str = "grpc", 
     output.append("## 1. Quick Benchmark with perf_analyzer\n")
     output.append("```bash")
     if backend in ("tensorrt_llm", "vllm"):
-        output.append(f"# For LLM models, use genai-perf instead")
+        output.append("# For LLM models, use genai-perf instead")
         output.append(f"genai-perf -m {model_name} --backend triton \\")
-        output.append(f"  --endpoint-type stream \\")
+        output.append("  --endpoint-type stream \\")
         output.append(f"  --concurrency {concurrency}")
     else:
         output.append(f"perf_analyzer -m {model_name} \\")
         output.append(f"  -p {protocol} \\")
         output.append(f"  -i {concurrency}")
         if backend == "python":
-            output.append(f"  --shape INPUT:1")
+            output.append("  --shape INPUT:1")
     output.append("```\n")
 
     output.append("## 2. Throughput & Latency Sweep\n")
@@ -537,19 +590,19 @@ def perf_test_guide(model_name: str, backend: str = "", protocol: str = "grpc", 
 
     output.append("## 3. Model Analyzer Profiling\n")
     output.append("```bash")
-    output.append(f"model-analyzer profile \\")
-    output.append(f"  --model-repository /models \\")
+    output.append("model-analyzer profile \\")
+    output.append("  --model-repository /models \\")
     output.append(f"  --profile-models {model_name} \\")
-    output.append(f"  --concurrency 1,2,4,8 \\")
-    output.append(f"  --batch-sizes 1,8,16,32")
+    output.append("  --concurrency 1,2,4,8 \\")
+    output.append("  --batch-sizes 1,8,16,32")
     output.append("```\n")
 
     output.append("## 4. Model Analyzer Analysis\n")
     output.append("```bash")
-    output.append(f"model-analyzer analyze \\")
+    output.append("model-analyzer analyze \\")
     output.append(f"  --analysis-models {model_name} \\")
-    output.append(f"  --analyzer-model-config-search \\")
-    output.append(f"  --output /tmp/model_analyzer_results")
+    output.append("  --analyzer-model-config-search \\")
+    output.append("  --output /tmp/model_analyzer_results")
     output.append("```\n")
 
     output.append("## Key Metrics to Watch\n")
@@ -560,7 +613,9 @@ def perf_test_guide(model_name: str, backend: str = "", protocol: str = "grpc", 
 
     if backend in ("tensorrt_llm", "vllm"):
         output.append("## LLM-Specific Metrics\n")
-        output.append("- **Time to First Token (TTFT)**: End-to-end latency for first token")
+        output.append(
+            "- **Time to First Token (TTFT)**: End-to-end latency for first token"
+        )
         output.append("- **Inter-Token Latency**: Time between generated tokens")
         output.append("- **Output Throughput**: Tokens per second\n")
 
@@ -603,69 +658,81 @@ def model_optimization_guide(backend: str, model_name: str = "my_model") -> str:
     output.append("## Configuration Optimization\n")
 
     if backend == "tensorrt":
-        output.extend([
-            "### TensorRT Optimization",
-            "1. **Use INT8/FP16 precision** when accuracy allows — can 2-4x throughput",
-            "2. **Set `acceleration: true`** in config.pbtxt to enable TensorRT acceleration",
-            "3. **Use dynamic batching** with `preferred_batch_size` matching your throughput needs",
-            "4. **Multiple model instances** via `instance_group` for GPU parallelism",
-            "5. **Pre-plan the engine** — first inference is slower; warm up with a dummy request",
-            "```",
-            f'name: "{model_name}"',
-            'platform: "tensorrt_plan"',
-            'max_batch_size: 32',
-            '',
-            'dynamic_batching {',
-            '  preferred_batch_size: [8, 16, 32]',
-            '  max_queue_delay_microseconds: 50000',
-            '}',
-            '',
-            'instance_group [',
-            '  { count: 2 kind: KIND_GPU }',
-            ']',
-            '```',
-        ])
+        output.extend(
+            [
+                "### TensorRT Optimization",
+                "1. **Use INT8/FP16 precision** when accuracy allows — can 2-4x throughput",
+                "2. **Set `acceleration: true`** in config.pbtxt to enable TensorRT acceleration",
+                "3. **Use dynamic batching** with `preferred_batch_size` matching your throughput needs",
+                "4. **Multiple model instances** via `instance_group` for GPU parallelism",
+                "5. **Pre-plan the engine** — first inference is slower; warm up with a dummy request",
+                "```",
+                f'name: "{model_name}"',
+                'platform: "tensorrt_plan"',
+                "max_batch_size: 32",
+                "",
+                "dynamic_batching {",
+                "  preferred_batch_size: [8, 16, 32]",
+                "  max_queue_delay_microseconds: 50000",
+                "}",
+                "",
+                "instance_group [",
+                "  { count: 2 kind: KIND_GPU }",
+                "]",
+                "```",
+            ]
+        )
     elif backend == "tensorrt_llm":
-        output.extend([
-            "### TensorRT-LLM Optimization",
-            "1. **Enable in-flight batching** — critical for LLM throughput",
-            "2. **Set `max_batch_size: 0`** to use unlimited batching with KV cache",
-            "3. **Use tensor parallelism** for large models on multiple GPUs",
-            "4. **Tune `max_queue_delay_microseconds`** for latency/throughput tradeoff",
-            "5. **Enable KV cache reuse** with decoupled transaction policy",
-        ])
+        output.extend(
+            [
+                "### TensorRT-LLM Optimization",
+                "1. **Enable in-flight batching** — critical for LLM throughput",
+                "2. **Set `max_batch_size: 0`** to use unlimited batching with KV cache",
+                "3. **Use tensor parallelism** for large models on multiple GPUs",
+                "4. **Tune `max_queue_delay_microseconds`** for latency/throughput tradeoff",
+                "5. **Enable KV cache reuse** with decoupled transaction policy",
+            ]
+        )
     elif backend == "vllm":
-        output.extend([
-            "### vLLM Backend Optimization",
-            "1. **PagedAttention** is enabled by default — most efficient KV cache management",
-            "2. **Continuous batching** handles variable-length sequences efficiently",
-            "3. **Multi-LoRA** support for serving multiple adapters from one model",
-            "4. **Set appropriate `gpu_memory_utilization`** (default 0.9) to avoid OOM",
-        ])
+        output.extend(
+            [
+                "### vLLM Backend Optimization",
+                "1. **PagedAttention** is enabled by default — most efficient KV cache management",
+                "2. **Continuous batching** handles variable-length sequences efficiently",
+                "3. **Multi-LoRA** support for serving multiple adapters from one model",
+                "4. **Set appropriate `gpu_memory_utilization`** (default 0.9) to avoid OOM",
+            ]
+        )
     elif backend == "pytorch":
-        output.extend([
-            "### PyTorch Backend Optimization",
-            "1. **Use TorchScript** for faster inference vs eager mode",
-            "2. **Enable dynamic batching** for throughput gains",
-            "3. **Use `KIND_GPU` instance group** for GPU acceleration",
-            "4. **Consider model warmup** — first inference may be slower due to JIT compilation",
-        ])
+        output.extend(
+            [
+                "### PyTorch Backend Optimization",
+                "1. **Use TorchScript** for faster inference vs eager mode",
+                "2. **Enable dynamic batching** for throughput gains",
+                "3. **Use `KIND_GPU` instance group** for GPU acceleration",
+                "4. **Consider model warmup** — first inference may be slower due to JIT compilation",
+            ]
+        )
     elif backend == "python":
-        output.extend([
-            "### Python Backend Optimization",
-            "1. **Use async `execute`** method with `asyncio` for I/O-bound models",
-            "2. **BLS (Business Logic Scripting)** for multi-model pipelines",
-            "3. **Avoid blocking calls** in `execute()` — use `await` for async operations",
-            "4. **Use shared memory** for large tensor transfers between models",
-        ])
+        output.extend(
+            [
+                "### Python Backend Optimization",
+                "1. **Use async `execute`** method with `asyncio` for I/O-bound models",
+                "2. **BLS (Business Logic Scripting)** for multi-model pipelines",
+                "3. **Avoid blocking calls** in `execute()` — use `await` for async operations",
+                "4. **Use shared memory** for large tensor transfers between models",
+            ]
+        )
     elif backend == "onnxruntime":
-        output.extend([
-            "### ONNX Runtime Optimization",
-            "1. **Use GPU execution provider** (`KIND_GPU`) for CUDA acceleration",
-            "2. **Enable dynamic batching** for throughput",
-            "3. **Convert models to ONNX from PyTorch/TensorFlow** for best compatibility",
-            "4. **Set `acceleration: true`** to enable ORT acceleration",
-        ])
+        output.extend(
+            [
+                "### ONNX Runtime Optimization",
+                "1. **Use GPU execution provider** (`KIND_GPU`) for CUDA acceleration",
+                "2. **Enable dynamic batching** for throughput",
+                "3. **Convert models to ONNX from PyTorch/TensorFlow** for best compatibility",
+                "4. **Set `acceleration: true`** to enable ORT acceleration",
+            ]
+        )
     else:
         output.append(f"See the {info['name']} documentation for optimization tips.")
 
@@ -694,7 +761,10 @@ def get_docs_index() -> str:
 def get_backends_resource() -> str:
     """List of available Triton backends."""
     return json.dumps(
-        {k: {"name": v["name"], "description": v["description"]} for k, v in BACKEND_INFO.items()},
+        {
+            k: {"name": v["name"], "description": v["description"]}
+            for k, v in BACKEND_INFO.items()
+        },
         indent=2,
     )
 

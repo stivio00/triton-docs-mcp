@@ -9,7 +9,12 @@ from urllib.parse import urljoin, urlparse
 import httpx
 from bs4 import BeautifulSoup, Tag
 
-from .config import BASE_URL, CRAWL_DELAY_SECONDS, CRAWL_MAX_CONCURRENT, CRAWL_TIMEOUT_SECONDS
+from .config import (
+    BASE_URL,
+    CRAWL_DELAY_SECONDS,
+    CRAWL_MAX_CONCURRENT,
+    CRAWL_TIMEOUT_SECONDS,
+)
 from .config import GITHUB_API_URL, GITHUB_RAW_URL, GITHUB_SOURCES
 
 logger = logging.getLogger(__name__)
@@ -18,7 +23,18 @@ _ALLOWED_PREFIX = urlparse(BASE_URL)
 _ALLOWED_NETLOC = _ALLOWED_PREFIX.netloc
 _ALLOWED_PATH_PREFIX = _ALLOWED_PREFIX.path.rsplit("/", 1)[0]
 
-_EXT_TO_SKIP = {".pdf", ".zip", ".tar.gz", ".gz", ".whl", ".png", ".jpg", ".svg", ".gif", ".mp4"}
+_EXT_TO_SKIP = {
+    ".pdf",
+    ".zip",
+    ".tar.gz",
+    ".gz",
+    ".whl",
+    ".png",
+    ".jpg",
+    ".svg",
+    ".gif",
+    ".mp4",
+}
 
 
 @dataclass
@@ -34,7 +50,9 @@ def _is_internal(url: str) -> bool:
     parsed = urlparse(url)
     if parsed.netloc and parsed.netloc != _ALLOWED_NETLOC:
         return False
-    if parsed.netloc == _ALLOWED_NETLOC and not parsed.path.startswith(_ALLOWED_PATH_PREFIX):
+    if parsed.netloc == _ALLOWED_NETLOC and not parsed.path.startswith(
+        _ALLOWED_PATH_PREFIX
+    ):
         return False
     lower = url.lower()
     for ext in _EXT_TO_SKIP:
@@ -56,24 +74,40 @@ def _normalize_url(url: str) -> str:
 
 
 def _extract_page(soup: BeautifulSoup, url: str) -> Page | None:
-    main = soup.find("main", id="main-content") or soup.find("main") or soup.find("div", role="main")
+    main = (
+        soup.find("main", id="main-content")
+        or soup.find("main")
+        or soup.find("div", role="main")
+    )
     if not main:
-        main = soup.find("div", class_=re.compile(r"document|content|body")) or soup.body
+        main = (
+            soup.find("div", class_=re.compile(r"document|content|body")) or soup.body
+        )
 
     if not main:
         return None
 
-    for tag in main.find_all(["nav", "header", "footer", "aside", "script", "style", "form"]):
+    for tag in main.find_all(
+        ["nav", "header", "footer", "aside", "script", "style", "form"]
+    ):
         tag.decompose()
 
-    for tag in main.find_all(class_=re.compile(r"sidebar|toc|breadcrumb|feedback|related", re.I)):
+    for tag in main.find_all(
+        class_=re.compile(r"sidebar|toc|breadcrumb|feedback|related", re.I)
+    ):
         tag.decompose()
 
     title_el = soup.find("h1")
     if title_el:
         title = title_el.get_text(strip=True).rstrip("#").strip()
     else:
-        title = urlparse(url).path.split("/")[-1].replace(".html", "").replace("_", " ").title()
+        title = (
+            urlparse(url)
+            .path.split("/")[-1]
+            .replace(".html", "")
+            .replace("_", " ")
+            .title()
+        )
         if not title:
             title = urlparse(url).path.split("/")[-2].replace("_", " ").title()
 
@@ -86,7 +120,11 @@ def _extract_page(soup: BeautifulSoup, url: str) -> Page | None:
         content_parts: list[str] = []
         sibling = heading.find_next_sibling()
         while sibling and sibling.name not in [f"h{i}" for i in range(1, level + 1)]:
-            if isinstance(sibling, Tag) and sibling.name != "script" and sibling.name != "style":
+            if (
+                isinstance(sibling, Tag)
+                and sibling.name != "script"
+                and sibling.name != "style"
+            ):
                 content_parts.append(sibling.get_text(separator=" ", strip=True))
             sibling = sibling.find_next_sibling()
         section_text = " ".join(content_parts).strip()
@@ -110,14 +148,24 @@ def _extract_page(soup: BeautifulSoup, url: str) -> Page | None:
     if len(content) < 50:
         return None
 
-    return Page(url=url, title=title, content=content, sections=sections, code_blocks=code_blocks)
+    return Page(
+        url=url,
+        title=title,
+        content=content,
+        sections=sections,
+        code_blocks=code_blocks,
+    )
 
 
 def _extract_links(soup: BeautifulSoup, base_url: str) -> set[str]:
     links = set()
     for a in soup.find_all("a", href=True):
         href = a["href"]
-        if href.startswith("#") or href.startswith("mailto:") or href.startswith("javascript:"):
+        if (
+            href.startswith("#")
+            or href.startswith("mailto:")
+            or href.startswith("javascript:")
+        ):
             continue
         full = urljoin(base_url, href)
         full = full.split("#")[0].split("?")[0]
@@ -137,7 +185,9 @@ async def crawl(max_pages: int = 0) -> list[Page]:
     seen_urls.add(_normalize_url(BASE_URL.rstrip("/") + "/index.html"))
     seen_urls.add(_normalize_url(BASE_URL))
 
-    async with httpx.AsyncClient(timeout=CRAWL_TIMEOUT_SECONDS, follow_redirects=True) as client:
+    async with httpx.AsyncClient(
+        timeout=CRAWL_TIMEOUT_SECONDS, follow_redirects=True
+    ) as client:
 
         async def _fetch(url: str) -> tuple[BeautifulSoup | None, str]:
             async with semaphore:
@@ -164,7 +214,9 @@ async def crawl(max_pages: int = 0) -> list[Page]:
             if not active:
                 break
 
-            done, active = await asyncio.wait(active, return_when=asyncio.FIRST_COMPLETED)
+            done, active = await asyncio.wait(
+                active, return_when=asyncio.FIRST_COMPLETED
+            )
             for task in done:
                 soup, url = await task
                 if soup is None:
@@ -191,7 +243,9 @@ async def crawl_github_sources() -> list[Page]:
     pages: list[Page] = []
     semaphore = asyncio.Semaphore(3)
 
-    async with httpx.AsyncClient(timeout=CRAWL_TIMEOUT_SECONDS, follow_redirects=True) as client:
+    async with httpx.AsyncClient(
+        timeout=CRAWL_TIMEOUT_SECONDS, follow_redirects=True
+    ) as client:
         for source_name, source in GITHUB_SOURCES.items():
             repo = source["repo"]
             branch = source["branch"]
@@ -200,13 +254,21 @@ async def crawl_github_sources() -> list[Page]:
             for glob_pat in source.get("extra_glob_patterns", []):
                 api_url = f"{GITHUB_API_URL}/{repo}/contents/{glob_pat.rsplit('/', 1)[0] if '/' in glob_pat else ''}?ref={branch}"
                 try:
-                    resp = await client.get(api_url, headers={"Accept": "application/vnd.github.v3+json"})
+                    resp = await client.get(
+                        api_url, headers={"Accept": "application/vnd.github.v3+json"}
+                    )
                     if resp.status_code == 200:
                         for item in resp.json():
                             if isinstance(item, dict) and item.get("type") == "file":
                                 import fnmatch
+
                                 basename = item.get("name", "")
-                                if fnmatch.fnmatch(basename, glob_pat.rsplit("/", 1)[-1] if "/" in glob_pat else glob_pat):
+                                if fnmatch.fnmatch(
+                                    basename,
+                                    glob_pat.rsplit("/", 1)[-1]
+                                    if "/" in glob_pat
+                                    else glob_pat,
+                                ):
                                     all_paths.append(item["path"])
                 except Exception as e:
                     logger.warning(f"Failed to list {glob_pat} in {repo}: {e}")
@@ -225,7 +287,14 @@ async def crawl_github_sources() -> list[Page]:
 
                 if path.endswith(".md"):
                     title_match = re.search(r"^#\s+(.+)$", text, re.MULTILINE)
-                    title = title_match.group(1).strip() if title_match else path.rsplit("/", 1)[-1].replace(".md", "").replace("_", " ").title()
+                    title = (
+                        title_match.group(1).strip()
+                        if title_match
+                        else path.rsplit("/", 1)[-1]
+                        .replace(".md", "")
+                        .replace("_", " ")
+                        .title()
+                    )
                     code_blocks: list[str] = []
                     in_code = False
                     code_buf: list[str] = []
@@ -245,16 +314,39 @@ async def crawl_github_sources() -> list[Page]:
                         h_match = re.match(r"^(#{1,6})\s+(.+)$", line)
                         if h_match:
                             if current_heading and current_content:
-                                sections.append({"heading": current_heading, "level": len(h_match.group(1)), "content": " ".join(current_content)})
+                                sections.append(
+                                    {
+                                        "heading": current_heading,
+                                        "level": len(h_match.group(1)),
+                                        "content": " ".join(current_content),
+                                    }
+                                )
                             current_heading = h_match.group(2).strip()
                             current_content = []
                         else:
                             current_content.append(line.strip())
                     if current_heading and current_content:
-                        sections.append({"heading": current_heading, "level": 1, "content": " ".join(current_content)})
-                    return Page(url=url, title=title, content=text, sections=sections, code_blocks=code_blocks)
+                        sections.append(
+                            {
+                                "heading": current_heading,
+                                "level": 1,
+                                "content": " ".join(current_content),
+                            }
+                        )
+                    return Page(
+                        url=url,
+                        title=title,
+                        content=text,
+                        sections=sections,
+                        code_blocks=code_blocks,
+                    )
                 elif path.endswith(".py"):
-                    title = path.rsplit("/", 1)[-1].replace(".py", "").replace("_", " ").title()
+                    title = (
+                        path.rsplit("/", 1)[-1]
+                        .replace(".py", "")
+                        .replace("_", " ")
+                        .title()
+                    )
                     docstrings: list[str] = []
                     current_doc: list[str] = []
                     in_doc = False
@@ -262,7 +354,12 @@ async def crawl_github_sources() -> list[Page]:
                         if '"""' in line or "'''" in line:
                             if in_doc:
                                 current_doc.append(line)
-                                docstrings.append(" ".join(current_doc).replace('"""', "").replace("'''", "").strip())
+                                docstrings.append(
+                                    " ".join(current_doc)
+                                    .replace('"""', "")
+                                    .replace("'''", "")
+                                    .strip()
+                                )
                                 current_doc = []
                                 in_doc = False
                             else:
@@ -287,10 +384,24 @@ async def crawl_github_sources() -> list[Page]:
                     content_parts.append(text)
                     content = "\n".join(content_parts)
                     code_blocks = [text]
-                    return Page(url=url, title=f"[{source_name}] {title}", content=content, code_blocks=code_blocks)
+                    return Page(
+                        url=url,
+                        title=f"[{source_name}] {title}",
+                        content=content,
+                        code_blocks=code_blocks,
+                    )
                 else:
-                    title = path.rsplit("/", 1)[-1].replace(".", " ").title() if path else source_name
-                    return Page(url=url, title=f"[{source_name}] {title}", content=text, code_blocks=[text] if text else [])
+                    title = (
+                        path.rsplit("/", 1)[-1].replace(".", " ").title()
+                        if path
+                        else source_name
+                    )
+                    return Page(
+                        url=url,
+                        title=f"[{source_name}] {title}",
+                        content=text,
+                        code_blocks=[text] if text else [],
+                    )
 
             for path in all_paths:
                 page = await _fetch_github(path)

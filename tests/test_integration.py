@@ -23,7 +23,7 @@ EXPECTED_TOOLS = [
     "list_backends",
     "get_model_config_template",
     "get_deployment_guide",
-"best_practices",
+    "best_practices",
     "list_doc_pages",
     "analyze_config",
     "python_client_help",
@@ -95,7 +95,9 @@ class TestMCPToolDiscovery:
         # Assert: all expected tools are present
         tool_names = [t.name for t in result.tools]
         for expected in EXPECTED_TOOLS:
-            assert expected in tool_names, f"Expected tool '{expected}' not found in {tool_names}"
+            assert expected in tool_names, (
+                f"Expected tool '{expected}' not found in {tool_names}"
+            )
 
     @pytest.mark.asyncio
     async def test_tool_count_matches(self, mcp_server):
@@ -125,7 +127,9 @@ class TestMCPToolExecution:
         # Assert: all backends are listed
         text = result.content[0].text
         for backend in EXPECTED_BACKENDS:
-            assert backend in text, f"Backend '{backend}' not found in list_backends output"
+            assert backend in text, (
+                f"Backend '{backend}' not found in list_backends output"
+            )
 
     @pytest.mark.asyncio
     async def test_search_docs_hybrid_returns_results(self, mcp_server):
@@ -134,16 +138,20 @@ class TestMCPToolExecution:
         async with streamable_http_client(MCP_URL) as (read_stream, write_stream, _):
             async with ClientSession(read_stream, write_stream) as session:
                 await session.initialize()
-                result = await session.call_tool("search_docs", {
-                    "query": "dynamic batching",
-                    "mode": "hybrid",
-                    "k": 3,
-                })
+                result = await session.call_tool(
+                    "search_docs",
+                    {
+                        "query": "dynamic batching",
+                        "mode": "hybrid",
+                        "k": 3,
+                    },
+                )
 
         # Assert: results contain relevant content
         text = result.content[0].text
-        assert "Result" in text or "batch" in text.lower(), \
+        assert "Result" in text or "batch" in text.lower(), (
             f"Search results don't contain expected content: {text[:200]}"
+        )
 
     @pytest.mark.asyncio
     async def test_search_docs_semantic_returns_results(self, mcp_server):
@@ -152,15 +160,20 @@ class TestMCPToolExecution:
         async with streamable_http_client(MCP_URL) as (read_stream, write_stream, _):
             async with ClientSession(read_stream, write_stream) as session:
                 await session.initialize()
-                result = await session.call_tool("search_docs", {
-                    "query": "TensorRT model deployment",
-                    "mode": "semantic",
-                    "k": 2,
-                })
+                result = await session.call_tool(
+                    "search_docs",
+                    {
+                        "query": "TensorRT model deployment",
+                        "mode": "semantic",
+                        "k": 2,
+                    },
+                )
 
         # Assert: results are returned
         text = result.content[0].text
-        assert len(text) > 50, f"Semantic search returned too little content: {text[:100]}"
+        assert len(text) > 50, (
+            f"Semantic search returned too little content: {text[:100]}"
+        )
 
     @pytest.mark.asyncio
     async def test_search_docs_keyword_returns_results(self, mcp_server):
@@ -169,16 +182,20 @@ class TestMCPToolExecution:
         async with streamable_http_client(MCP_URL) as (read_stream, write_stream, _):
             async with ClientSession(read_stream, write_stream) as session:
                 await session.initialize()
-                result = await session.call_tool("search_docs", {
-                    "query": "model repository",
-                    "mode": "keyword",
-                    "k": 2,
-                })
+                result = await session.call_tool(
+                    "search_docs",
+                    {
+                        "query": "model repository",
+                        "mode": "keyword",
+                        "k": 2,
+                    },
+                )
 
         # Assert: results contain the search terms
         text = result.content[0].text
-        assert "model" in text.lower() and "repository" in text.lower(), \
+        assert "model" in text.lower() and "repository" in text.lower(), (
             f"Keyword search results don't contain expected terms: {text[:200]}"
+        )
 
     @pytest.mark.asyncio
     async def test_get_model_config_template_python(self, mcp_server):
@@ -187,11 +204,14 @@ class TestMCPToolExecution:
         async with streamable_http_client(MCP_URL) as (read_stream, write_stream, _):
             async with ClientSession(read_stream, write_stream) as session:
                 await session.initialize()
-                result = await session.call_tool("get_model_config_template", {
-                    "backend": "python",
-                    "model_name": "my_python_model",
-                    "max_batch_size": 8,
-                })
+                result = await session.call_tool(
+                    "get_model_config_template",
+                    {
+                        "backend": "python",
+                        "model_name": "my_python_model",
+                        "max_batch_size": 8,
+                    },
+                )
 
         # Assert: config contains required fields
         text = result.content[0].text
@@ -199,7 +219,9 @@ class TestMCPToolExecution:
         assert 'platform: "python"' in text, "Config should contain python platform"
         assert "max_batch_size: 8" in text, "Config should contain max_batch_size"
         assert "instance_group" in text, "Config should contain instance_group"
-        assert "dynamic_batching" in text, "Config should contain dynamic_batching for batch_size > 0"
+        assert "dynamic_batching" in text, (
+            "Config should contain dynamic_batching for batch_size > 0"
+        )
 
     @pytest.mark.asyncio
     async def test_get_model_config_template_tensorrt_llm(self, mcp_server):
@@ -208,17 +230,22 @@ class TestMCPToolExecution:
         async with streamable_http_client(MCP_URL) as (read_stream, write_stream, _):
             async with ClientSession(read_stream, write_stream) as session:
                 await session.initialize()
-                result = await session.call_tool("get_model_config_template", {
-                    "backend": "tensorrt_llm",
-                    "model_name": "llama_model",
-                    "max_batch_size": 0,
-                })
+                result = await session.call_tool(
+                    "get_model_config_template",
+                    {
+                        "backend": "tensorrt_llm",
+                        "model_name": "llama_model",
+                        "max_batch_size": 0,
+                    },
+                )
 
         # Assert: config has LLM-specific fields and no dynamic batching for batch_size=0
         text = result.content[0].text
         assert 'name: "llama_model"' in text
         assert "tensorrt_llm" in text
-        assert "dynamic_batching" not in text, "LLM with batch_size=0 should not have dynamic_batching"
+        assert "dynamic_batching" not in text, (
+            "LLM with batch_size=0 should not have dynamic_batching"
+        )
 
     @pytest.mark.asyncio
     async def test_get_model_config_template_unknown_backend(self, mcp_server):
@@ -227,9 +254,12 @@ class TestMCPToolExecution:
         async with streamable_http_client(MCP_URL) as (read_stream, write_stream, _):
             async with ClientSession(read_stream, write_stream) as session:
                 await session.initialize()
-                result = await session.call_tool("get_model_config_template", {
-                    "backend": "nonexistent_backend",
-                })
+                result = await session.call_tool(
+                    "get_model_config_template",
+                    {
+                        "backend": "nonexistent_backend",
+                    },
+                )
 
         # Assert: returns error about unknown backend
         text = result.content[0].text
@@ -243,12 +273,16 @@ class TestMCPToolExecution:
         async with streamable_http_client(MCP_URL) as (read_stream, write_stream, _):
             async with ClientSession(read_stream, write_stream) as session:
                 await session.initialize()
-                result = await session.call_tool("get_deployment_guide", {"topic": "docker"})
+                result = await session.call_tool(
+                    "get_deployment_guide", {"topic": "docker"}
+                )
 
         # Assert: docker guide contains key information
         text = result.content[0].text
         assert "docker" in text.lower()
-        assert "nvcr.io" in text or "tritonserver" in text, "Docker guide should mention NGC container"
+        assert "nvcr.io" in text or "tritonserver" in text, (
+            "Docker guide should mention NGC container"
+        )
 
     @pytest.mark.asyncio
     async def test_get_deployment_guide_unknown_topic(self, mcp_server):
@@ -257,7 +291,9 @@ class TestMCPToolExecution:
         async with streamable_http_client(MCP_URL) as (read_stream, write_stream, _):
             async with ClientSession(read_stream, write_stream) as session:
                 await session.initialize()
-                result = await session.call_tool("get_deployment_guide", {"topic": "nonexistent"})
+                result = await session.call_tool(
+                    "get_deployment_guide", {"topic": "nonexistent"}
+                )
 
         # Assert: returns available topics
         text = result.content[0].text
@@ -272,12 +308,16 @@ class TestMCPToolExecution:
         async with streamable_http_client(MCP_URL) as (read_stream, write_stream, _):
             async with ClientSession(read_stream, write_stream) as session:
                 await session.initialize()
-                result = await session.call_tool("best_practices", {"topic": "architecture"})
+                result = await session.call_tool(
+                    "best_practices", {"topic": "architecture"}
+                )
 
         # Assert: returns best practices with links
         text = result.content[0].text
         assert "Architecture" in text or "architecture" in text.lower()
-        assert "docs.nvidia.com" in text or "Result" in text, "Should reference docs or show search results"
+        assert "docs.nvidia.com" in text or "Result" in text, (
+            "Should reference docs or show search results"
+        )
 
     @pytest.mark.asyncio
     async def test_best_practices_invalid_topic(self, mcp_server):
@@ -286,7 +326,9 @@ class TestMCPToolExecution:
         async with streamable_http_client(MCP_URL) as (read_stream, write_stream, _):
             async with ClientSession(read_stream, write_stream) as session:
                 await session.initialize()
-                result = await session.call_tool("best_practices", {"topic": "invalid_topic"})
+                result = await session.call_tool(
+                    "best_practices", {"topic": "invalid_topic"}
+                )
 
         # Assert: lists available topics
         text = result.content[0].text
@@ -318,7 +360,7 @@ class TestMCPToolExecution:
                 pages_text = list_result.content[0].text
 
                 # Extract first URL from the page list
-                urls = re.findall(r'\((https://docs\.nvidia\.com[^)]+)\)', pages_text)
+                urls = re.findall(r"\((https://docs\.nvidia\.com[^)]+)\)", pages_text)
                 assert len(urls) > 0, "Should have at least one page URL"
 
                 # Act: get page content
@@ -326,7 +368,9 @@ class TestMCPToolExecution:
 
         # Assert: page content is non-empty and substantial
         text = page_result.content[0].text
-        assert len(text) > 100, f"Page content should be substantial, got {len(text)} chars"
+        assert len(text) > 100, (
+            f"Page content should be substantial, got {len(text)} chars"
+        )
 
 
 class TestMCPResources:
@@ -343,8 +387,12 @@ class TestMCPResources:
 
         # Assert: triton://docs/index and triton://backends resources are registered
         uris = [str(r.uri) for r in resources.resources]
-        assert "triton://docs/index" in uris, f"Expected triton://docs/index in resources: {uris}"
-        assert "triton://backends" in uris, f"Expected triton://backends in resources: {uris}"
+        assert "triton://docs/index" in uris, (
+            f"Expected triton://docs/index in resources: {uris}"
+        )
+        assert "triton://backends" in uris, (
+            f"Expected triton://backends in resources: {uris}"
+        )
 
     @pytest.mark.asyncio
     async def test_backends_resource_returns_json(self, mcp_server):
@@ -377,8 +425,12 @@ class TestMCPPrompts:
 
         # Assert: expected prompts are registered (MCP uses function names, not titles)
         prompt_names = [p.name for p in result.prompts]
-        assert "developer" in prompt_names, f"Expected 'developer' prompt, got: {prompt_names}"
-        assert "troubleshooter" in prompt_names, f"Expected 'troubleshooter' prompt, got: {prompt_names}"
+        assert "developer" in prompt_names, (
+            f"Expected 'developer' prompt, got: {prompt_names}"
+        )
+        assert "troubleshooter" in prompt_names, (
+            f"Expected 'troubleshooter' prompt, got: {prompt_names}"
+        )
 
     @pytest.mark.asyncio
     async def test_developer_prompt(self, mcp_server):
@@ -387,10 +439,14 @@ class TestMCPPrompts:
         async with streamable_http_client(MCP_URL) as (read_stream, write_stream, _):
             async with ClientSession(read_stream, write_stream) as session:
                 await session.initialize()
-                result = await session.get_prompt("developer", {"task": "deploy a PyTorch model"})
+                result = await session.get_prompt(
+                    "developer", {"task": "deploy a PyTorch model"}
+                )
 
         # Assert: prompt contains system instructions and the task
-        text = "\n".join([m.content.text for m in result.messages if hasattr(m.content, 'text')])
+        text = "\n".join(
+            [m.content.text for m in result.messages if hasattr(m.content, "text")]
+        )
         assert "Triton" in text
         assert "deploy a PyTorch model" in text
 
@@ -401,14 +457,19 @@ class TestMCPPrompts:
         async with streamable_http_client(MCP_URL) as (read_stream, write_stream, _):
             async with ClientSession(read_stream, write_stream) as session:
                 await session.initialize()
-                result = await session.get_prompt("troubleshooter", {
-                    "error_message": "model load failed",
-                    "model_name": "my_model",
-                    "backend": "pytorch",
-                })
+                result = await session.get_prompt(
+                    "troubleshooter",
+                    {
+                        "error_message": "model load failed",
+                        "model_name": "my_model",
+                        "backend": "pytorch",
+                    },
+                )
 
         # Assert: prompt contains the error and model info
-        text = "\n".join([m.content.text for m in result.messages if hasattr(m.content, 'text')])
+        text = "\n".join(
+            [m.content.text for m in result.messages if hasattr(m.content, "text")]
+        )
         assert "model load failed" in text
         assert "my_model" in text
 
@@ -480,7 +541,7 @@ class TestDirectFunctionCalls:
         """Arrange: create a typical config.pbtxt"""
         from triton_mcp.server import analyze_config
 
-        config = '''name: "my_model"
+        config = """name: "my_model"
 platform: "onnxruntime_onnx"
 max_batch_size: 8
 input [
@@ -495,14 +556,16 @@ dynamic_batching {
 }
 instance_group [
   { count: 1 kind: KIND_GPU }
-]'''
+]"""
 
         # Act: analyze the config
         result = analyze_config(config)
 
         # Assert: analysis contains relevant info
         assert "my_model" in result, "Should show model name"
-        assert "onnxruntime" in result.lower() or "Optimization" in result, "Should identify backend"
+        assert "onnxruntime" in result.lower() or "Optimization" in result, (
+            "Should identify backend"
+        )
 
     def test_analyze_config_with_issues(self):
         """Arrange: create an incomplete config.pbtxt"""
@@ -526,7 +589,9 @@ instance_group [
         # Assert: guide contains TensorRT-specific content
         assert "TensorRT" in result
         assert "resnet50" in result
-        assert "dynamic_batching" in result.lower() or "instance_group" in result.lower()
+        assert (
+            "dynamic_batching" in result.lower() or "instance_group" in result.lower()
+        )
 
     def test_model_optimization_guide_unknown_backend(self):
         """Arrange: request optimization guide for unknown backend"""

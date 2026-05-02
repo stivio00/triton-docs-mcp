@@ -53,7 +53,11 @@ class SearchEngine:
         self._ensure_connections()
         assert self.collection is not None
 
-        results = self.collection.query(query_texts=[query], n_results=k, include=["documents", "metadatas", "distances"])
+        results = self.collection.query(
+            query_texts=[query],
+            n_results=k,
+            include=["documents", "metadatas", "distances"],
+        )
 
         if not results["ids"][0]:
             return []
@@ -62,14 +66,16 @@ class SearchEngine:
         for i, doc_id in enumerate(results["ids"][0]):
             meta = results["metadatas"][0][i]
             distance = results["distances"][0][i]
-            search_results.append(SearchResult(
-                chunk_id=doc_id,
-                page_url=meta["page_url"],
-                page_title=meta["page_title"],
-                section=meta.get("section", ""),
-                content=results["documents"][0][i],
-                score=1.0 - distance,
-            ))
+            search_results.append(
+                SearchResult(
+                    chunk_id=doc_id,
+                    page_url=meta["page_url"],
+                    page_title=meta["page_title"],
+                    section=meta.get("section", ""),
+                    content=results["documents"][0][i],
+                    score=1.0 - distance,
+                )
+            )
 
         return search_results
 
@@ -124,14 +130,16 @@ class SearchEngine:
                 )
                 rows = cursor.fetchall()
                 for row in rows:
-                    results.append(SearchResult(
-                        chunk_id=row[0],
-                        page_url=row[1],
-                        page_title=row[2],
-                        section=row[3] or "",
-                        content=row[4],
-                        score=float(row[6]) if row[6] else 0.0,
-                    ))
+                    results.append(
+                        SearchResult(
+                            chunk_id=row[0],
+                            page_url=row[1],
+                            page_title=row[2],
+                            section=row[3] or "",
+                            content=row[4],
+                            score=float(row[6]) if row[6] else 0.0,
+                        )
+                    )
 
         return results
 
@@ -163,14 +171,17 @@ class SearchEngine:
             (url,),
         )
         rows = cursor.fetchall()
-        return [SearchResult(
-            chunk_id=row[0],
-            page_url=row[1],
-            page_title=row[2],
-            section=row[3] or "",
-            content=row[5],
-            score=0.0,
-        ) for row in rows]
+        return [
+            SearchResult(
+                chunk_id=row[0],
+                page_url=row[1],
+                page_title=row[2],
+                section=row[3] or "",
+                content=row[5],
+                score=0.0,
+            )
+            for row in rows
+        ]
 
     def list_pages(self) -> list[dict]:
         self._ensure_connections()
