@@ -11,14 +11,14 @@ COPY src/ src/
 
 RUN pip install --no-cache-dir .
 
-RUN triton-index
+RUN triton-docs-index
 
-ENV TRITON_MCP_PORT=8080
-ENV TRITON_MCP_HOST=0.0.0.0
+ENV TRITON_DOCS_MCP_PORT=8080
+ENV TRITON_DOCS_MCP_HOST=0.0.0.0
 
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/mcp')" || exit 1
 
-CMD ["triton-mcp"]
+CMD ["triton-docs-mcp"]

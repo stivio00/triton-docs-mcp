@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "triton-mcp"
+name = "triton-docs-mcp"
 version = "0.1.0"
 description = "MCP server for NVIDIA Triton Inference Server documentation"
 readme = "README.md"
@@ -19,11 +19,11 @@ dependencies = [
 ]
 
 [project.scripts]
-triton-mcp = "triton_mcp.server:main"
-triton-index = "triton_mcp.scripts.index_docs:main"
+triton-docs-mcp = "triton_docs_mcp.server:main"
+triton-docs-index = "triton_docs_mcp.scripts.index_docs:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/triton_mcp"]
+packages = ["src/triton_docs_mcp"]
 
 [dependency-groups]
 dev = [

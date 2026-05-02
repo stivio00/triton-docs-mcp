@@ -1,4 +1,4 @@
-.triton_mcp_index/
+.triton_docs_mcp_index/
 __pycache__/
 *.pyc
 *.pyo

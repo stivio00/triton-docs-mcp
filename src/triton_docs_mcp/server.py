@@ -56,7 +56,7 @@ async def app_lifespan(server: FastMCP):
         logger.info(f"Index ready with {len(pages)} pages")
     except Exception:
         logger.warning(
-            "Index not found. Run `triton-index` first to build the docs index."
+            "Index not found. Run `triton-docs-index` first to build the docs index."
         )
     yield
     global _engine
@@ -339,7 +339,7 @@ def list_doc_pages() -> str:
     engine = _get_engine()
     pages = engine.list_pages()
     if not pages:
-        return "No pages indexed. Run `triton-index` to build the index first."
+        return "No pages indexed. Run `triton-docs-index` to build the index first."
     lines = [f"# Indexed Triton Documentation ({len(pages)} pages)\n"]
     for p in pages:
         lines.append(f"- [{p['title']}]({p['url']})")
@@ -814,8 +814,8 @@ I need to optimize the performance of my Triton model:
 
 def main():
     logging.basicConfig(level=logging.INFO)
-    port = int(os.environ.get("TRITON_MCP_PORT", "8080"))
-    host = os.environ.get("TRITON_MCP_HOST", "0.0.0.0")
+    port = int(os.environ.get("TRITON_DOCS_MCP_PORT", "8080"))
+    host = os.environ.get("TRITON_DOCS_MCP_HOST", "0.0.0.0")
     mcp.settings.host = host
     mcp.settings.port = port
     mcp.run(transport="streamable-http")

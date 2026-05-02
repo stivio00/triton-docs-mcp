@@ -1,4 +1,4 @@
-# Triton MCP
+# Triton Docs MCP
 
 MCP server for NVIDIA Triton Inference Server documentation. Crawls and indexes the official docs, providing semantic search (via ChromaDB embeddings), keyword search (via SQLite FTS5), and hybrid search (Reciprocal Rank Fusion), plus tools for generating model configurations and deployment guidance.
 
@@ -9,19 +9,19 @@ MCP server for NVIDIA Triton Inference Server documentation. Crawls and indexes 
 pip install -e .
 
 # Index documentation + GitHub sources (first time, takes ~2-3 minutes)
-triton-index
+triton-docs-index
 
 # Index only docs (skip GitHub sources)
-triton-index --skip-github
+triton-docs-index --skip-github
 
 # Index only GitHub sources (skip docs site)
-triton-index --skip-docs
+triton-docs-index --skip-docs
 
 # Start the MCP server (Streamable HTTP on port 8080)
-triton-mcp
+triton-docs-mcp
 ```
 
-The index is stored at `~/.triton_mcp_index/` and persists across restarts. Re-run `triton-index` to update.
+The index is stored at `~/.triton_docs_mcp_index/` and persists across restarts. Re-run `triton-docs-index` to update.
 
 **Data sources indexed:**
 - Official docs site (~200 pages)
@@ -65,8 +65,8 @@ The index is stored at `~/.triton_mcp_index/` and persists across restarts. Re-r
 
 | Environment Variable | Default | Description |
 |---------------------|---------|-------------|
-| `TRITON_MCP_PORT` | `8080` | HTTP port for streamable-http transport |
-| `TRITON_MCP_HOST` | `0.0.0.0` | Bind host |
+| `TRITON_DOCS_MCP_PORT` | `8080` | HTTP port for streamable-http transport |
+| `TRITON_DOCS_MCP_HOST` | `0.0.0.0` | Bind host |
 
 ## Adding to MCP Clients
 
@@ -165,13 +165,13 @@ This builds the image, indexes the docs, and starts the server on port 8080.
 ### Re-index Docs
 
 ```bash
-docker compose run --rm triton-mcp triton-index
+docker compose run --rm triton-docs-mcp triton-docs-index
 ```
 
 ### Custom Port
 
 ```bash
-TRITON_MCP_PORT=9090 docker compose up -d
+TRITON_DOCS_MCP_PORT=9090 docker compose up -d
 ```
 
 ## Development
@@ -193,8 +193,8 @@ pytest tests/ -v -k "TestMCP"
 ## Architecture
 
 ```
-triton-mcp/
-├── src/triton_mcp/
+triton-docs-mcp/
+├── src/triton_docs_mcp/
 │   ├── config.py          # Constants, backend info, topics
 │   ├── crawler.py          # Async BFS web crawler (httpx + BeautifulSoup)
 │   ├── indexer.py           # Document chunking + ChromaDB/SQLite indexing
@@ -227,10 +227,10 @@ triton-mcp/
 
 ### Cons vs. raw web fetch
 
-- **Can be stale** — index reflects docs at `triton-index` time; re-run to pick up updates
-- **Setup required** — needs `triton-index` and ChromaDB/SQLite dependencies
+- **Can be stale** — index reflects docs at `triton-docs-index` time; re-run to pick up updates
+- **Setup required** — needs `triton-docs-index` and ChromaDB/SQLite dependencies
 - **Limited scope** — only covers indexed sources; niche topics may be missing
-- **Disk usage** — index at `~/.triton_mcp_index/` takes local storage
+- **Disk usage** — index at `~/.triton_docs_mcp_index/` takes local storage
 
 ### When to use which
 

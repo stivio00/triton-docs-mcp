@@ -3,7 +3,7 @@ from pathlib import Path
 BASE_URL = (
     "https://docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/"
 )
-INDEX_DIR = Path.home() / ".triton_mcp_index"
+INDEX_DIR = Path.home() / ".triton_docs_mcp_index"
 CHROMA_DIR = INDEX_DIR / "chroma_db"
 SQLITE_PATH = INDEX_DIR / "triton_docs.db"
 COLLECTION_NAME = "triton_docs"

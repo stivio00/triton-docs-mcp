@@ -2,12 +2,12 @@
 
 ## Project Overview
 
-Triton MCP is a Model Context Protocol (MCP) server that indexes NVIDIA Triton Inference Server documentation and provides tools for searching, configuring, deploying, and optimizing Triton applications.
+Triton Docs MCP is a Model Context Protocol (MCP) server that indexes NVIDIA Triton Inference Server documentation and provides tools for searching, configuring, deploying, and optimizing Triton applications.
 
 ## Project Structure
 
 ```
-src/triton_mcp/
+src/triton_docs_mcp/
 ├── config.py          # Constants: base URLs, backend info, GitHub sources, topics
 ├── crawler.py          # Web crawler (docs site) + GitHub source crawler
 ├── indexer.py          # Document chunking (tiktoken) + ChromaDB + SQLite FTS5
@@ -15,7 +15,7 @@ src/triton_mcp/
 ├── prompts.py          # System prompts: developer, troubleshooter, optimizer
 ├── server.py           # FastMCP server: 11 tools, 2 resources, 3 prompts
 └── scripts/
-    └── index_docs.py   # CLI: triton-index (crawl + index everything)
+    └── index_docs.py   # CLI: triton-docs-index (crawl + index everything)
 ```
 
 ## Key Commands
@@ -25,13 +25,13 @@ src/triton_mcp/
 uv sync --group dev
 
 # Rebuild the search index from scratch (docs + GitHub sources)
-triton-index                          # full: docs + GitHub
-triton-index --skip-github            # docs only (faster)
-triton-index --skip-docs              # GitHub sources only
+triton-docs-index                          # full: docs + GitHub
+triton-docs-index --skip-github            # docs only (faster)
+triton-docs-index --skip-docs              # GitHub sources only
 
 # Start MCP server (streamable HTTP on port 8080)
-triton-mcp
-TRITON_MCP_PORT=9090 triton-mcp      # custom port
+triton-docs-mcp
+TRITON_DOCS_MCP_PORT=9090 triton-docs-mcp      # custom port
 
 # Run linter and formatter (MUST run before committing)
 uv run ruff check src/ tests/         # lint check
@@ -48,7 +48,7 @@ pytest tests/ -v -k "TestMCP"          # MCP client-server tests only
 
 ### Transport: Streamable HTTP
 
-Default `http://0.0.0.0:8080/mcp`. Configurable via `TRITON_MCP_PORT` and `TRITON_MCP_HOST` env vars.
+Default `http://0.0.0.0:8080/mcp`. Configurable via `TRITON_DOCS_MCP_PORT` and `TRITON_DOCS_MCP_HOST` env vars.
 
 ### Data Sources Indexed
 
@@ -60,7 +60,7 @@ Default `http://0.0.0.0:8080/mcp`. Configurable via `TRITON_MCP_PORT` and `TRITO
 | triton-inference-server/perf_analyzer | GitHub (MD) | ~8 |
 | triton-inference-server/model_analyzer | GitHub (MD) | ~9 |
 
-Index stored at `~/.triton_mcp_index/` (ChromaDB + SQLite). Re-run `triton-index` to update.
+Index stored at `~/.triton_docs_mcp_index/` (ChromaDB + SQLite). Re-run `triton-docs-index` to update.
 
 ### Tools (11)
 
@@ -121,18 +121,18 @@ Index stored at `~/.triton_mcp_index/` (ChromaDB + SQLite). Re-run `triton-index
 ### Adding a new GitHub source
 
 1. Add repo config to `GITHUB_SOURCES` in `config.py` with `repo`, `branch`, `paths`, and optional `extra_glob_patterns`
-2. Re-run `triton-index` to pick up the new source
+2. Re-run `triton-docs-index` to pick up the new source
 
 ### Changing the index schema
 
 1. Edit `indexer.py` (chunking) or `search.py` (search logic)
-2. Delete `~/.triton_mcp_index/` to force a rebuild
-3. Run `triton-index`
+2. Delete `~/.triton_docs_mcp_index/` to force a rebuild
+3. Run `triton-docs-index`
 4. Run tests
 
 ## Testing
 
-Integration tests use a real MCP server (started on port 9876 via subprocess). Direct function tests don't need a server. Unit tests don't need a server or an index. All other tests require the index to be built (`triton-index` must have been run at least once).
+Integration tests use a real MCP server (started on port 9876 via subprocess). Direct function tests don't need a server. Unit tests don't need a server or an index. All other tests require the index to be built (`triton-docs-index` must have been run at least once).
 
 ```bash
 pytest tests/ -v                             # everything

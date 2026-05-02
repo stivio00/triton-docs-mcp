@@ -6,5 +6,5 @@ __pycache__/
 *.egg-info/
 dist/
 build/
-.triton_mcp_index/
+.triton_docs_mcp_index/
 .DS_Store

@@ -55,7 +55,7 @@ def main() -> None:
     indexer.close()
 
     print("Done! Index built successfully.")
-    print("Run `triton-mcp` to start the MCP server.")
+    print("Run `triton-docs-mcp` to start the MCP server.")
 
 
 if __name__ == "__main__":

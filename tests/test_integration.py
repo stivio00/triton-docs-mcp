@@ -60,9 +60,9 @@ BEST_PRACTICE_TOPICS = [
 @pytest.fixture(scope="module")
 def mcp_server():
     env = os.environ.copy()
-    env["TRITON_MCP_PORT"] = str(MCP_PORT)
+    env["TRITON_DOCS_MCP_PORT"] = str(MCP_PORT)
     proc = subprocess.Popen(
-        [sys.executable, "-m", "triton_mcp.server"],
+        [sys.executable, "-m", "triton_docs_mcp.server"],
         env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -479,7 +479,7 @@ class TestDirectFunctionCalls:
 
     def test_search_docs_direct(self):
         """Arrange: get the search engine directly"""
-        from triton_mcp.search import SearchEngine
+        from triton_docs_mcp.search import SearchEngine
 
         engine = SearchEngine()
 
@@ -497,7 +497,7 @@ class TestDirectFunctionCalls:
 
     def test_list_backends_direct(self):
         """Arrange: import backends directly from config"""
-        from triton_mcp.config import BACKEND_INFO
+        from triton_docs_mcp.config import BACKEND_INFO
 
         # Act: get the backend keys
         result_backends = list(BACKEND_INFO.keys())
@@ -508,7 +508,7 @@ class TestDirectFunctionCalls:
 
     def test_get_model_config_template_direct(self):
         """Arrange: get the config template function from server module"""
-        from triton_mcp.server import get_model_config_template
+        from triton_docs_mcp.server import get_model_config_template
 
         # Act: generate config for vLLM backend
         result = get_model_config_template("vllm", model_name="llama_test")
@@ -520,7 +520,7 @@ class TestDirectFunctionCalls:
 
     def test_search_modes_return_different_results(self):
         """Arrange: create search engine with same query"""
-        from triton_mcp.search import SearchEngine
+        from triton_docs_mcp.search import SearchEngine
 
         engine = SearchEngine()
         query = "batching configuration"
@@ -539,7 +539,7 @@ class TestDirectFunctionCalls:
 
     def test_analyze_config_with_valid_config(self):
         """Arrange: create a typical config.pbtxt"""
-        from triton_mcp.server import analyze_config
+        from triton_docs_mcp.server import analyze_config
 
         config = """name: "my_model"
 platform: "onnxruntime_onnx"
@@ -569,7 +569,7 @@ instance_group [
 
     def test_analyze_config_with_issues(self):
         """Arrange: create an incomplete config.pbtxt"""
-        from triton_mcp.server import analyze_config
+        from triton_docs_mcp.server import analyze_config
 
         config = 'name: "broken_model"\nmax_batch_size: 32'
 
@@ -581,7 +581,7 @@ instance_group [
 
     def test_model_optimization_guide_tensorrt(self):
         """Arrange: request optimization guide for tensorrt backend"""
-        from triton_mcp.server import model_optimization_guide
+        from triton_docs_mcp.server import model_optimization_guide
 
         # Act: get optimization guide
         result = model_optimization_guide("tensorrt", model_name="resnet50")
@@ -595,7 +595,7 @@ instance_group [
 
     def test_model_optimization_guide_unknown_backend(self):
         """Arrange: request optimization guide for unknown backend"""
-        from triton_mcp.server import model_optimization_guide
+        from triton_docs_mcp.server import model_optimization_guide
 
         # Act: get optimization guide for unknown backend
         result = model_optimization_guide("nonexistent")
@@ -605,7 +605,7 @@ instance_group [
 
     def test_perf_test_guide(self):
         """Arrange: request perf test guide"""
-        from triton_mcp.server import perf_test_guide
+        from triton_docs_mcp.server import perf_test_guide
 
         # Act: get perf test guide
         result = perf_test_guide("my_model", backend="pytorch", protocol="grpc")

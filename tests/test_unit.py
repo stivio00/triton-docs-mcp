@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 
-from triton_mcp.crawler import Page, _is_internal, _normalize_url, _extract_links
-from triton_mcp.indexer import _chunk_text, _build_chunks
-from triton_mcp.search import SearchResult
+from triton_docs_mcp.crawler import Page, _is_internal, _normalize_url, _extract_links
+from triton_docs_mcp.indexer import _chunk_text, _build_chunks
+from triton_docs_mcp.search import SearchResult
 
 
 class TestIsInternal:
@@ -195,7 +195,7 @@ class TestExtractLinks:
     def test_extracts_internal_links(self):
         from bs4 import BeautifulSoup
 
-        from triton_mcp.config import BASE_URL
+        from triton_docs_mcp.config import BASE_URL
 
         html = f'<html><body><a href="{BASE_URL}page.html">Link</a></body></html>'
         soup = BeautifulSoup(html, "lxml")
