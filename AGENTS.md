@@ -21,8 +21,8 @@ src/triton_mcp/
 ## Key Commands
 
 ```bash
-# Install (editable, with dev deps)
-pip install -e ".[dev]"
+# Install (editable, with dev deps including ruff)
+uv sync --group dev
 
 # Rebuild the search index from scratch (docs + GitHub sources)
 triton-index                          # full: docs + GitHub
@@ -33,9 +33,14 @@ triton-index --skip-docs              # GitHub sources only
 triton-mcp
 TRITON_MCP_PORT=9090 triton-mcp      # custom port
 
+# Run linter and formatter (MUST run before committing)
+uv run ruff check src/ tests/         # lint check
+uv run ruff format src/ tests/        # auto-format
+
 # Run tests
-pytest tests/ -v                       # all 29 tests (integration + direct)
+pytest tests/ -v                       # all tests (integration + unit + direct)
 pytest tests/ -v -k "TestDirect"       # direct function tests only (no server start)
+pytest tests/ -v -k "TestUnit"         # unit tests only (no server, no index needed)
 pytest tests/ -v -k "TestMCP"          # MCP client-server tests only
 ```
 
@@ -101,6 +106,7 @@ Index stored at `~/.triton_mcp_index/` (ChromaDB + SQLite). Re-run `triton-index
 - No comments unless explicitly requested
 - `config.py` is the single source of constants — no magic strings elsewhere
 - Tests use Arrange-Act-Assert pattern with clear section comments
+- Always run `ruff check` and `ruff format` before committing
 
 ## Common Tasks
 
@@ -126,10 +132,11 @@ Index stored at `~/.triton_mcp_index/` (ChromaDB + SQLite). Re-run `triton-index
 
 ## Testing
 
-Integration tests use a real MCP server (started on port 9876 via subprocess). Direct function tests don't need a server. All tests require the index to be built (`triton-index` must have been run at least once).
+Integration tests use a real MCP server (started on port 9876 via subprocess). Direct function tests don't need a server. Unit tests don't need a server or an index. All other tests require the index to be built (`triton-index` must have been run at least once).
 
 ```bash
 pytest tests/ -v                             # everything
 pytest tests/ -v -k "TestDirect"             # fast, no server needed
+pytest tests/ -v -k "TestUnit"               # unit tests, no server or index needed
 pytest tests/ -v -k "TestMCPToolDiscovery"   # needs server, tests tool listing
 ```

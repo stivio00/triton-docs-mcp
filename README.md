@@ -59,6 +59,7 @@ The index is stored at `~/.triton_mcp_index/` and persists across restarts. Re-r
 |------|-------------|
 | `developer` | System prompt for building Triton apps |
 | `troubleshooter` | Prompt for debugging deployment issues |
+| `optimizer` | Prompt for optimizing model performance |
 
 ## Configuration
 
@@ -177,7 +178,7 @@ TRITON_MCP_PORT=9090 docker compose up -d
 
 ```bash
 # Install with dev dependencies
-pip install -e ".[dev]"
+uv sync --group dev
 
 # Run tests
 pytest tests/ -v
@@ -199,10 +200,10 @@ triton-mcp/
 │   ├── indexer.py           # Document chunking + ChromaDB/SQLite indexing
 │   ├── search.py            # Semantic/keyword/hybrid search
 │   ├── prompts.py           # Triton system & troubleshooting prompts
-│   ├── server.py            # FastMCP server (7 tools, 2 resources, 2 prompts)
+│   ├── server.py            # FastMCP server (11 tools, 2 resources, 3 prompts)
 │   └── scripts/index_docs.py  # CLI entry point for indexing
 ├── tests/
-│   └── test_integration.py  # 24 integration tests (AAA pattern)
+│   └── test_integration.py  # Integration tests (AAA pattern)
 ├── Dockerfile
 ├── docker-compose.yml
 └── pyproject.toml

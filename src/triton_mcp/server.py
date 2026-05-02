@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from contextlib import asynccontextmanager
 
 from mcp.server.fastmcp import FastMCP
@@ -161,8 +162,7 @@ def get_model_config_template(
         available = ", ".join(f"`{k}`" for k in BACKEND_INFO)
         return f"Unknown backend: {backend}. Available: {available}"
 
-    info = BACKEND_INFO[backend]
-    kind = "KIND_GPU" if gpu else "KIND_CPU"
+    BACKEND_INFO[backend]
     device = "KIND_GPU" if gpu else "KIND_CPU"
 
     platform_map = {
@@ -359,16 +359,13 @@ def analyze_config(config_pbtxt: str) -> str:
     Returns:
         Analysis of the config with optimization suggestions.
     """
-    import re as _re
-
     issues: list[str] = []
     suggestions: list[str] = []
     info: dict[str, str] = {}
 
-    name_m = _re.search(r'name:\s*"([^"]+)"', config_pbtxt)
-    platform_m = _re.search(r'platform:\s*"([^"]+)"', config_pbtxt)
-    max_batch_m = _re.search(r"max_batch_size:\s*(\d+)", config_pbtxt)
-    batch_m = _re.search(r"max_batch_size:\s*(\d+)", config_pbtxt)
+    name_m = re.search(r'name:\s*"([^"]+)"', config_pbtxt)
+    platform_m = re.search(r'platform:\s*"([^"]+)"', config_pbtxt)
+    max_batch_m = re.search(r"max_batch_size:\s*(\d+)", config_pbtxt)
     has_dynamic_batching = "dynamic_batching" in config_pbtxt
     has_instance_group = "instance_group" in config_pbtxt
     has_response_cache = "response_cache" in config_pbtxt

@@ -68,8 +68,6 @@ def _build_chunks(pages: list[Page]) -> list[Chunk]:
         )
 
         combined = f"# {page.title}\n\n{sections_text}" if sections_text else page_text
-        if len(combined.strip()) < len(page_text.strip()):
-            combined = page_text
 
         text_chunks = _chunk_text(combined)
         code_joined = "\n\n---\n\n".join(page.code_blocks) if page.code_blocks else ""
@@ -85,7 +83,23 @@ def _build_chunks(pages: list[Page]) -> list[Chunk]:
 
             section_name = ""
             if page.sections:
-                section_name = page.sections[0]["heading"]
+                chunk_start = combined.find(chunk_content)
+                if chunk_start < 0:
+                    chunk_start = 0
+                best_section = ""
+                best_sec_end = -1
+                for sec in page.sections:
+                    sec_heading = f"## {sec['heading']}"
+                    sec_start = combined.find(sec_heading)
+                    if sec_start >= 0:
+                        sec_end = sec_start + len(sec_heading)
+                        if (
+                            sec_end <= chunk_start + len(chunk_content)
+                            and sec_start >= best_sec_end
+                        ):
+                            best_section = sec["heading"]
+                            best_sec_end = sec_start
+                section_name = best_section
 
             all_chunks.append(
                 Chunk(
@@ -159,7 +173,8 @@ class Indexer:
 
         collection = self._init_chroma()
         self._init_sqlite()
-        assert self.sqlite_conn is not None
+        if self.sqlite_conn is None:
+            raise RuntimeError("Failed to initialize SQLite connection")
 
         batch_size = 100
         for start in range(0, len(chunks), batch_size):
@@ -210,7 +225,8 @@ class Indexer:
     def get_page_map(self) -> dict[str, str]:
         if not self.sqlite_conn:
             self._init_sqlite()
-        assert self.sqlite_conn is not None
+        if self.sqlite_conn is None:
+            raise RuntimeError("Failed to initialize SQLite connection")
         rows = self.sqlite_conn.execute(
             "SELECT DISTINCT page_url, page_title FROM chunks ORDER BY page_url"
         ).fetchall()
@@ -219,3 +235,4 @@ class Indexer:
     def close(self) -> None:
         if self.sqlite_conn:
             self.sqlite_conn.close()
+            self.sqlite_conn = None

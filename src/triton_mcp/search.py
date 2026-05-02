@@ -39,19 +39,10 @@ class SearchEngine:
             self.sqlite_conn = sqlite3.connect(str(SQLITE_PATH))
             self.sqlite_conn.execute("PRAGMA journal_mode=WAL")
 
-    def _chunk_from_row(self, row: tuple) -> SearchResult:
-        return SearchResult(
-            chunk_id=row[0],
-            page_url=row[1],
-            page_title=row[2],
-            section=row[3] or "",
-            content=row[5],
-            score=0.0,
-        )
-
     def semantic_search(self, query: str, k: int = 5) -> list[SearchResult]:
         self._ensure_connections()
-        assert self.collection is not None
+        if self.collection is None:
+            raise RuntimeError("Search engine not initialized: collection is None")
 
         results = self.collection.query(
             query_texts=[query],
@@ -81,7 +72,8 @@ class SearchEngine:
 
     def keyword_search(self, query: str, k: int = 5) -> list[SearchResult]:
         self._ensure_connections()
-        assert self.sqlite_conn is not None
+        if self.sqlite_conn is None:
+            raise RuntimeError("Search engine not initialized: sqlite_conn is None")
 
         escaped = query.replace('"', '""')
         fts_query = f'"{escaped}"'
@@ -164,7 +156,8 @@ class SearchEngine:
 
     def get_page(self, url: str) -> list[SearchResult]:
         self._ensure_connections()
-        assert self.sqlite_conn is not None
+        if self.sqlite_conn is None:
+            raise RuntimeError("Search engine not initialized: sqlite_conn is None")
 
         cursor = self.sqlite_conn.execute(
             "SELECT chunk_id, page_url, page_title, section, chunk_index, content, code_blocks FROM chunks WHERE page_url = ? ORDER BY chunk_index",
@@ -185,7 +178,8 @@ class SearchEngine:
 
     def list_pages(self) -> list[dict]:
         self._ensure_connections()
-        assert self.sqlite_conn is not None
+        if self.sqlite_conn is None:
+            raise RuntimeError("Search engine not initialized: sqlite_conn is None")
 
         cursor = self.sqlite_conn.execute(
             "SELECT DISTINCT page_url, page_title FROM chunks ORDER BY page_title"
@@ -195,3 +189,4 @@ class SearchEngine:
     def close(self) -> None:
         if self.sqlite_conn:
             self.sqlite_conn.close()
+            self.sqlite_conn = None

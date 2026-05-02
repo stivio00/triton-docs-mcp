@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import fnmatch
 import logging
 import re
 from dataclasses import dataclass, field
@@ -58,8 +59,6 @@ def _is_internal(url: str) -> bool:
     for ext in _EXT_TO_SKIP:
         if lower.endswith(ext):
             return False
-    if parsed_fragment := parsed.fragment:
-        pass
     return True
 
 
@@ -196,7 +195,7 @@ async def crawl(max_pages: int = 0) -> list[Page]:
                     resp = await client.get(url)
                     resp.raise_for_status()
                     return BeautifulSoup(resp.text, "lxml"), url
-                except Exception as e:
+                except httpx.HTTPError as e:
                     logger.warning(f"Failed to fetch {url}: {e}")
                     return None, url
 
@@ -260,8 +259,6 @@ async def crawl_github_sources() -> list[Page]:
                     if resp.status_code == 200:
                         for item in resp.json():
                             if isinstance(item, dict) and item.get("type") == "file":
-                                import fnmatch
-
                                 basename = item.get("name", "")
                                 if fnmatch.fnmatch(
                                     basename,
@@ -270,7 +267,7 @@ async def crawl_github_sources() -> list[Page]:
                                     else glob_pat,
                                 ):
                                     all_paths.append(item["path"])
-                except Exception as e:
+                except httpx.HTTPError as e:
                     logger.warning(f"Failed to list {glob_pat} in {repo}: {e}")
 
             async def _fetch_github(path: str) -> Page | None:
@@ -281,7 +278,7 @@ async def crawl_github_sources() -> list[Page]:
                         resp = await client.get(url)
                         resp.raise_for_status()
                         text = resp.text
-                    except Exception as e:
+                    except httpx.HTTPError as e:
                         logger.warning(f"Failed to fetch {url}: {e}")
                         return None
 
